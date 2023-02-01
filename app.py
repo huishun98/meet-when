@@ -1,8 +1,9 @@
-from telegram import Bot
 from bot import convos
 import config
 from log import logger
 from bot import commands
+from telegram import Update, Bot
+from flask import Flask, request, Response
 from telegram.ext import (
     Updater,
     CommandHandler,
@@ -45,10 +46,21 @@ def prepare_dispatcher(dp):
 
 # Use webhook when running in prod (via gunicorn)
 if config.ENV:
+    app = Flask(__name__)
+
     bot = Bot(token=config.TELEGRAM_BOT_TOKEN)
     bot.setWebhook(config.BOTHOST)
     dp = Dispatcher(bot=bot, update_queue=None)
     prepare_dispatcher(dp)
+
+    @app.get("/")
+    def home():
+        return "Hello world!"
+
+    @app.post("/")
+    def process_update():
+        dp.process_update(Update.de_json(request.get_json(force=True), bot))
+        return Response(status=200)
 
 
 # Use polling when running locally
